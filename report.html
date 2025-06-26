@@ -1,0 +1,173 @@
+import telegram
+from telegram.ext import Application, CommandHandler, ConversationHandler, MessageHandler, filters
+from datetime import datetime
+
+# Define conversation states
+(
+    CLIENT,
+    DATE,
+    TECH,
+    SO_NUMBER,
+    TPR,
+    JOB_TYPE,
+    TRANSPORT,
+    JOB_DESCRIPTION,
+    REMARK,
+    PIC,
+    CONFIRMATION,
+) = map(chr, range(11))
+
+# Store report data
+report_data = {}
+
+async def fill_report(update, context):
+    """Starts the report filling conversation."""
+    await update.message.reply_text(
+        "Let's fill out the technical daily report. Please enter the Client name:"
+    )
+    return CLIENT
+
+async def get_client(update, context):
+    """Gets the client name."""
+    context.user_data['client'] = update.message.text
+    await update.message.reply_text(f"Client: {context.user_data['client']}\nPlease enter the Date (YYYY-MM-DD):")
+    return DATE
+
+async def get_date(update, context):
+    """Gets the date."""
+    date_text = update.message.text
+    try:
+        datetime.strptime(date_text, '%Y-%m-%d')
+        context.user_data['date'] = date_text
+        await update.message.reply_text(f"Date: {context.user_data['date']}\nPlease enter the Technician's name:")
+        return TECH
+    except ValueError:
+        await update.message.reply_text("Invalid date format. Please use YYYY-MM-DD.")
+        return DATE
+
+async def get_tech(update, context):
+    """Gets the technician's name."""
+    context.user_data['tech'] = update.message.text
+    await update.message.reply_text(f"Tech: {context.user_data['tech']}\nPlease enter the SO Number:")
+    return SO_NUMBER
+
+async def get_so_number(update, context):
+    """Gets the SO number."""
+    context.user_data['so_number'] = update.message.text
+    await update.message.reply_text(f"SO Number: {context.user_data['so_number']}\nPlease enter the TPR:")
+    return TPR
+
+async def get_tpr(update, context):
+    """Gets the TPR."""
+    context.user_data['tpr'] = update.message.text
+    await update.message.reply_text(f"TPR: {context.user_data['tpr']}\nPlease enter the Job Type:")
+    return JOB_TYPE
+
+async def get_job_type(update, context):
+    """Gets the job type."""
+    context.user_data['job_type'] = update.message.text
+    await update.message.reply_text(f"Job Type: {context.user_data['job_type']}\nPlease enter the Transport used:")
+    return TRANSPORT
+
+async def get_transport(update, context):
+    """Gets the transport."""
+    context.user_data['transport'] = update.message.text
+    await update.message.reply_text(f"Transport: {context.user_data['transport']}\nPlease enter the Job Description:")
+    return JOB_DESCRIPTION
+
+async def get_job_description(update, context):
+    """Gets the job description."""
+    context.user_data['job_description'] = update.message.text
+    await update.message.reply_text(f"Job Description: {context.user_data['job_description']}\nPlease enter any Remarks:")
+    return REMARK
+
+async def get_remark(update, context):
+    """Gets the remarks."""
+    context.user_data['remark'] = update.message.text
+    await update.message.reply_text(f"Remark: {context.user_data['remark']}\nPlease enter the PIC:")
+    return PIC
+
+async def get_pic(update, context):
+    """Gets the PIC."""
+    context.user_data['pic'] = update.message.text
+    # Display collected data for confirmation
+    report_summary = (
+        "Please confirm the report details:\n"
+        f"Client: {context.user_data['client']}\n"
+        f"Date: {context.user_data['date']}\n"
+        f"Tech: {context.user_data['tech']}\n"
+        f"SO Number: {context.user_data['so_number']}\n"
+        f"TPR: {context.user_data['tpr']}\n"
+        f"Job Type: {context.user_data['job_type']}\n"
+        f"Transport: {context.user_data['transport']}\n"
+        f"Job Description: {context.user_data['job_description']}\n"
+        f"Remark: {context.user_data['remark']}\n"
+        f"PIC: {context.user_data['pic']}\n\n"
+        "Is this information correct? (yes/no)"
+    )
+    await update.message.reply_text(report_summary)
+    return CONFIRMATION
+
+async def confirmation(update, context):
+    """Handles the confirmation response."""
+    response = update.message.text.lower()
+    if response == 'yes':
+        # Here you can process the collected data (e.g., save to a file, database, etc.)
+        report_string = (
+            "Technical Daily Report:\n"
+            f"Client: {context.user_data['client']}\n"
+            f"Date: {context.user_data['date']}\n"
+            f"Tech: {context.user_data['tech']}\n"
+            f"SO Number: {context.user_data['so_number']}\n"
+            f"TPR: {context.user_data['tpr']}\n"
+            f"Job Type: {context.user_data['job_type']}\n"
+            f"Transport: {context.user_data['transport']}\n"
+            f"Job Description: {context.user_data['job_description']}\n"
+            f"Remark: {context.user_data['remark']}\n"
+            f"PIC: {context.user_data['pic']}"
+        )
+        await update.message.reply_text("Report submitted successfully!\n\n" + report_string)
+        return ConversationHandler.END
+    elif response == 'no':
+        await update.message.reply_text("Report filling cancelled. You can start again with /fillreport")
+        return ConversationHandler.END
+    else:
+        await update.message.reply_text("Invalid response. Please answer with 'yes' or 'no'.")
+        return CONFIRMATION
+
+async def cancel(update, context):
+    """Cancels and ends the conversation."""
+    await update.message.reply_text("Report filling cancelled.")
+    return ConversationHandler.END
+
+def main():
+    """Starts the Telegram bot."""
+    TOKEN = "7724347563:AAGTnlQ8d0oWm7f2NFLWbr3JGapuCwkTFxQ"  # Replace with your actual token
+    application = Application.builder().token(TOKEN).build()
+
+    # Create the conversation handler
+    report_conversation = ConversationHandler(
+        entry_points=[CommandHandler('fillreport', fill_report)],
+        states={
+            CLIENT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_client)],
+            DATE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_date)],
+            TECH: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_tech)],
+            SO_NUMBER: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_so_number)],
+            TPR: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_tpr)],
+            JOB_TYPE: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_job_type)],
+            TRANSPORT: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_transport)],
+            JOB_DESCRIPTION: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_job_description)],
+            REMARK: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_remark)],
+            PIC: [MessageHandler(filters.TEXT & ~filters.COMMAND, get_pic)],
+            CONFIRMATION: [MessageHandler(filters.TEXT & ~filters.COMMAND, confirmation)],
+        },
+        fallbacks=[CommandHandler('cancel', cancel)],
+    )
+
+    application.add_handler(report_conversation)
+
+    # Start the bot
+    application.run_polling()
+
+if __name__ == '__main__':
+    main()
